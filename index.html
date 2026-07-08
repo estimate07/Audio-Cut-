@@ -158,7 +158,9 @@
             padding:2px 6px;border-radius:6px;white-space:nowrap;}
 
         /* F37: confirm modal */
-        .qc-modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.72);backdrop-filter:blur(3px);
+        /* No backdrop-filter anywhere: blur layers over an animating canvas
+           corrupt GPU compositing on many Android phones (rainbow static) */
+        .qc-modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.85);
             z-index:60;display:flex;align-items:center;justify-content:center;padding:24px;}
 
         /* Small utility buttons */
@@ -182,7 +184,7 @@
 <body class="bg-slate-900 text-slate-100 antialiased pb-12">
 
     <!-- Top App Navigation / Header -->
-    <header class="bg-slate-800/90 backdrop-blur-md border-b border-slate-700/80 sticky top-0 z-30 px-4 py-3.5 shadow-md">
+    <header class="bg-slate-800 border-b border-slate-700/80 sticky top-0 z-30 px-4 py-3.5 shadow-md">
         <div class="max-w-md mx-auto flex items-center justify-between">
             <div class="flex items-center space-x-2.5">
                 <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
@@ -423,8 +425,8 @@
 
                 <div id="waveformContainer" class="relative w-full h-32 bg-slate-900/90 rounded-xl overflow-hidden border border-slate-700 cursor-pointer shadow-inner">
                     <canvas id="waveformCanvas" class="w-full h-full block"></canvas>
-                    <div id="zoomBadge" class="hidden absolute top-1 right-2 bg-slate-950/80 backdrop-blur text-[10px] text-teal-300 px-2 py-0.5 rounded-md pointer-events-none font-mono">1.0×</div>
-                    <div class="absolute bottom-1 right-2 bg-slate-950/80 backdrop-blur text-[10px] text-slate-400 px-2 py-0.5 rounded-md pointer-events-none" data-i18n="tapHint">
+                    <div id="zoomBadge" class="hidden absolute top-1 right-2 bg-slate-950/90 text-[10px] text-teal-300 px-2 py-0.5 rounded-md pointer-events-none font-mono">1.0×</div>
+                    <div class="absolute bottom-1 right-2 bg-slate-950/90 text-[10px] text-slate-400 px-2 py-0.5 rounded-md pointer-events-none" data-i18n="tapHint">
                         Tap red = restore • green = seek • pinch = zoom
                     </div>
                 </div>
@@ -2437,6 +2439,7 @@ self.onmessage = function (ev) {
     // rAF LOOP (A2): drives playhead, ticks and skip-silence preview
     // ---------------------------------------------------------------------
     let rafId = null;
+    let lastPlayheadPx = -1;
     function ensureRaf() { if (rafId === null) rafId = requestAnimationFrame(rafTick); }
     function rafTick(ts) {
         rafId = null;
@@ -2455,7 +2458,10 @@ self.onmessage = function (ev) {
             if (cur >= A.trim.end - 0.01) editorPlayer.stop();
             else {
                 $('rawPlaybackTime').textContent = formatTime(cur) + ' / ' + formatTime(A.buffer.duration);
-                drawWave();
+                // Only repaint when the playhead actually moved a pixel -
+                // needless 60fps canvas uploads overwhelm phone GPUs
+                const px = Math.round(timeToX(cur, $('waveformCanvas').width));
+                if (px !== lastPlayheadPx) { lastPlayheadPx = px; drawWave(); }
             }
             again = true;
         }

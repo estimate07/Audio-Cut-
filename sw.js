@@ -1,5 +1,5 @@
 /* QuietCut Service Worker - true offline support (F1) */
-const CACHE = 'quietcut-v1';
+const CACHE = 'quietcut-v2';
 const ASSETS = [
   './',
   './index.html',
