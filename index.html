@@ -206,7 +206,7 @@
                 </select>
                 <!-- Offline Status Badge -->
                 <div class="flex items-center space-x-1.5 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-1 rounded-full text-xs text-emerald-300 font-semibold shadow-inner">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
                     <span data-i18n="offline">100% Offline</span>
                 </div>
             </div>
@@ -244,8 +244,7 @@
         <section id="uploadSection" class="flex-1 flex flex-col justify-center">
             <div id="dropZone" class="bg-slate-800/80 border-2 border-dashed border-slate-600/80 hover:border-emerald-500/60 rounded-3xl p-6 text-center transition-all duration-300 shadow-xl relative overflow-hidden group">
 
-                <div class="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
-                <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                <!-- decorative blur glows removed: CSS filter blur corrupts GPU tiles on Android -->
 
                 <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-slate-700/60 border border-slate-600 flex items-center justify-center text-emerald-400 shadow-inner group-hover:scale-105 transition-transform duration-300">
                     <svg class="w-10 h-10 stroke-[1.75]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -386,7 +385,6 @@
 
             <!-- DURATION REDUCTION SUMMARY CARD -->
             <div class="bg-gradient-to-br from-slate-800 to-slate-800/90 border border-emerald-500/30 rounded-2xl p-4 shadow-lg relative overflow-hidden">
-                <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-emerald-500/10 rounded-full blur-xl"></div>
                 <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1 flex items-center space-x-1.5">
                     <svg class="w-4 h-4 stroke-[2.5]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
                     <span data-i18n="estLenTitle">Estimated Length After Cleaning</span>
