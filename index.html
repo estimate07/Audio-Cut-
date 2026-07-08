@@ -1823,7 +1823,8 @@ self.onmessage = function (ev) {
             if (!isLead) cs = snapValley(cs, run.s, Math.max(run.s, ce - 0.05));
             if (!isTrail && !breath) ce = snapValley(ce, Math.min(run.e, cs + 0.05), run.e);
 
-            if (ce - cs < 0.05) continue;
+            // Skip micro-cuts: removing < 0.2s saves nothing and litters the UI
+            if (ce - cs < ((isLead || isTrail) ? 0.05 : 0.2)) continue;
 
             // S17: confidence scoring
             const cb0 = Math.round(cs * fps), cb1 = Math.max(cb0 + 1, Math.round(ce * fps));
@@ -1841,7 +1842,7 @@ self.onmessage = function (ev) {
 
             let status;
             if (protectedIds.has(id)) { status = 'protected'; report.nProtected++; }
-            else if (smart && conf < 0.65 && !isLead && !isTrail) { status = 'review'; report.nReview++; }
+            else if (smart && conf < 0.5 && !isLead && !isTrail) { status = 'review'; report.nReview++; }
             else status = 'cut';
 
             if (status !== 'protected') {
@@ -1890,7 +1891,7 @@ self.onmessage = function (ev) {
         return {
             mode: S.mode,
             thresholdDB: smart ? clamp(auto.autoTh + learn.biasTh, -70, -20) : S.thresholdDB,
-            minPause: smart ? clamp(Math.max(0.25, auto.medPause * 0.7) + learn.biasPause, 0.2, 1.2) : S.minPause,
+            minPause: smart ? clamp(Math.max(0.35, auto.medPause * 0.7) + learn.biasPause, 0.3, 1.2) : S.minPause,
             bufferSec: S.bufferMs / 1000,
             medPause: auto.medPause,
             removeBreaths: S.removeBreaths,
@@ -2052,11 +2053,14 @@ self.onmessage = function (ev) {
     let waveDim = null, waveBright = null;
     let growStart = 0, growAnimating = false;
 
+    // Cap pixel density at 2x: dpr-3 phones choke on full-density canvas repaints
+    function waveDpr() { return Math.min(window.devicePixelRatio || 1, 2); }
+
     function resizeWaveformCanvas() {
         const container = $('waveformContainer');
         const canvas = $('waveformCanvas');
         const rect = container.getBoundingClientRect();
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = waveDpr();
         canvas.width = Math.max(10, Math.round(rect.width * dpr));
         canvas.height = Math.max(10, Math.round(rect.height * dpr));
     }
@@ -2076,7 +2080,7 @@ self.onmessage = function (ev) {
         if (!canvas || !A.peak || !A.buffer) return;
         const w = canvas.width, h = canvas.height;
         if (w < 10) return;
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = waveDpr();
 
         if (!waveDim) waveDim = document.createElement('canvas');
         if (!waveBright) waveBright = document.createElement('canvas');
@@ -2187,18 +2191,16 @@ self.onmessage = function (ev) {
             ctx.restore();
         }
 
-        // A2: smooth playhead with glow
+        // A2: smooth playhead (soft halo drawn cheaply - shadowBlur kills mobile GPUs)
         if (cur > 0.001 && px >= 0 && px <= w) {
-            const dpr = window.devicePixelRatio || 1;
-            ctx.save();
-            ctx.shadowColor = 'rgba(251,191,36,0.9)';
-            ctx.shadowBlur = 8 * dpr;
+            const dpr = waveDpr();
+            ctx.fillStyle = 'rgba(251,191,36,0.25)';
+            ctx.fillRect(px - 3 * dpr, 0, 6 * dpr, h);
             ctx.fillStyle = '#fbbf24';
             ctx.fillRect(px - dpr, 0, 2 * dpr, h);
             ctx.beginPath();
             ctx.arc(px, 5 * dpr, 3.5 * dpr, 0, Math.PI * 2);
             ctx.fill();
-            ctx.restore();
         }
     }
 
@@ -3489,12 +3491,20 @@ self.onmessage = function (ev) {
             }
         });
 
+        // Debounced + width-only: mobile URL-bar show/hide fires resize on every
+        // scroll, and re-rendering the canvas mid-scroll causes visual smearing
+        let resizeTimer = null, lastW = window.innerWidth;
         window.addEventListener('resize', () => {
-            if (!$('editorSection').classList.contains('hidden') && A.buffer) {
-                resizeWaveformCanvas();
-                renderWaveBase();
-                drawWave();
-            }
+            if (window.innerWidth === lastW) return;
+            lastW = window.innerWidth;
+            if (resizeTimer) clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (!$('editorSection').classList.contains('hidden') && A.buffer) {
+                    resizeWaveformCanvas();
+                    renderWaveBase();
+                    drawWave();
+                }
+            }, 200);
         });
     }
 
