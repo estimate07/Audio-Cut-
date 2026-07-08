@@ -298,7 +298,7 @@
                     <span id="batchCount" class="text-xs font-mono text-slate-400">0</span>
                 </div>
                 <div id="batchList" class="space-y-2 max-h-72 overflow-y-auto pr-1"></div>
-                <p class="text-[11px] text-slate-400 mt-3" data-i18n="batchNote">All files are processed with the current detection settings (Smart Auto calibrates each file separately).</p>
+                <p class="text-[11px] text-slate-400 mt-3" data-i18n="batchNote">All files are processed with the current silence-detection settings.</p>
                 <div class="grid grid-cols-2 gap-2.5 mt-3">
                     <button type="button" id="btnBatchStart" onclick="startBatch()" class="py-3 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-extrabold text-sm rounded-xl active:scale-[0.98] transition-all" data-i18n="batchStart">Process All</button>
                     <button type="button" id="btnBatchZip" onclick="downloadBatchZip()" disabled class="mini-btn py-3 text-sm font-extrabold" data-i18n="batchZip">Download All (ZIP)</button>
@@ -360,27 +360,6 @@
             <div id="largeFileWarning" class="hidden bg-amber-500/15 border border-amber-500/40 rounded-2xl p-3 text-xs text-amber-200 flex items-center space-x-2.5">
                 <svg class="w-5 h-5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 <span data-i18n="largeFile"><strong>Large file detected:</strong> Processing and waveform rendering may be slower on older phones.</span>
-            </div>
-
-            <!-- SMART AUTO-CUT CARD (S1, S7-S11, S17-S19) -->
-            <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-md space-y-3">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
-                        <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
-                        <span data-i18n="cutMode">Cutting Mode</span>
-                    </h3>
-                    <div class="bg-slate-900 p-1 rounded-xl border border-slate-700 flex space-x-1">
-                        <button type="button" id="modeSmartBtn" onclick="setMode('smart')" class="mini-btn mini-btn-active" data-i18n="modeSmart">Smart Auto</button>
-                        <button type="button" id="modeManualBtn" onclick="setMode('manual')" class="mini-btn" data-i18n="modeManual">Manual</button>
-                    </div>
-                </div>
-                <div id="smartPanel">
-                    <p id="smartInfo" class="text-[11px] text-slate-400 font-mono leading-relaxed"></p>
-                    <p id="learnNote" class="hidden text-[11px] text-teal-300 mt-1.5 flex items-center gap-1.5">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0013.5 18.469V19a1.5 1.5 0 01-3 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                        <span id="learnNoteText"></span>
-                    </p>
-                </div>
             </div>
 
             <!-- DURATION REDUCTION SUMMARY CARD -->
@@ -449,8 +428,8 @@
                 </div>
             </div>
 
-            <!-- MANUAL SLIDERS CARD -->
-            <div id="manualPanel" class="hidden bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-md space-y-5">
+            <!-- SILENCE DETECTION SLIDERS CARD -->
+            <div id="manualPanel" class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-md space-y-5">
                 <div class="flex items-center justify-between border-b border-slate-700/80 pb-2.5">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
                         <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
@@ -535,7 +514,7 @@
                     </div>
                     <label class="flex items-center gap-2.5 text-xs font-bold text-white cursor-pointer select-none">
                         <input type="checkbox" id="breathToggle" class="qc-check" checked>
-                        <span data-i18n="advBreath">Remove breath sounds (Smart mode)</span>
+                        <span data-i18n="advBreath">Remove breath sounds</span>
                     </label>
                     <label class="flex items-center gap-2.5 text-xs font-bold text-white cursor-pointer select-none">
                         <input type="checkbox" id="trimEndsToggle" class="qc-check" checked>
@@ -1013,9 +992,6 @@ self.onmessage = function (ev) {
             upNote: 'Note: Large WAV files stream in chunks. Very long compressed files (1hr+) may still be slow on older phones.',
             largeFile: 'Large file detected: processing and waveform rendering may be slower on older phones.',
             cancel: 'Cancel', change: 'Change',
-            cutMode: 'Cutting Mode', modeSmart: 'Smart Auto', modeManual: 'Manual',
-            smartInfo: 'Noise floor {floor} dB • Speech {speech} dB • Auto threshold {th} dB • Typical pause {pause}s',
-            learnNote: 'Auto-cut tuned by {n} of your previous corrections',
             estLenTitle: 'Estimated Length After Cleaning',
             savedBadge: 'Saved {t} ({p}%)',
             bufNote: 'Includes speech safety buffers & smooth crossfades to prevent jump cuts or clicks.',
@@ -1031,7 +1007,7 @@ self.onmessage = function (ev) {
             advanced: 'Advanced Settings',
             advBuffer: 'Speech safety buffer', advFade: 'Crossfade length',
             advGate: 'Background noise reduction', advLoud: 'Loudness normalization',
-            advBreath: 'Remove breath sounds (Smart mode)',
+            advBreath: 'Remove breath sounds',
             advTrimEnds: 'Fully trim leading & trailing silence',
             loudOff: 'Off', gateOff: 'Off',
             trimTitle: 'Trim / Extract Range', trimStart: 'Start', trimEnd: 'End',
@@ -1061,7 +1037,7 @@ self.onmessage = function (ev) {
             yes: 'Yes, discard', no: 'Cancel',
             batchTitle: 'Batch Queue', batchStart: 'Process All', batchZip: 'Download All (ZIP)',
             batchClear: 'Clear queue',
-            batchNote: 'All files are processed with the current detection settings (Smart Auto calibrates each file separately).',
+            batchNote: 'All files are processed with the current silence-detection settings.',
             stPending: 'Waiting', stProc: 'Processing…', stDone: 'Done', stErr: 'Failed',
             ldRead: 'Reading file...', ldReadSub: 'Loading audio into phone memory',
             ldDecode: 'Decoding Audio...', ldDecodeSub: 'Uncompressing audio tracks offline',
@@ -1098,9 +1074,6 @@ self.onmessage = function (ev) {
             upNote: 'नोट: बड़ी WAV फ़ाइलें टुकड़ों में पढ़ी जाती हैं। बहुत लंबी फ़ाइलें (1घंटा+) पुराने फ़ोन पर धीमी हो सकती हैं।',
             largeFile: 'बड़ी फ़ाइल: पुराने फ़ोन पर प्रोसेसिंग धीमी हो सकती है।',
             cancel: 'रद्द करें', change: 'बदलें',
-            cutMode: 'कटिंग मोड', modeSmart: 'स्मार्ट ऑटो', modeManual: 'मैनुअल',
-            smartInfo: 'नॉइज़ फ़्लोर {floor} dB • आवाज़ {speech} dB • ऑटो थ्रेशोल्ड {th} dB • सामान्य विराम {pause}s',
-            learnNote: 'आपके {n} पिछले सुधारों से ऑटो-कट ट्यून हुआ',
             estLenTitle: 'सफ़ाई के बाद अनुमानित लंबाई',
             savedBadge: '{t} बचा ({p}%)',
             bufNote: 'जंप-कट और क्लिक रोकने के लिए सेफ़्टी बफ़र और क्रॉसफ़ेड शामिल हैं।',
@@ -1116,7 +1089,7 @@ self.onmessage = function (ev) {
             advanced: 'एडवांस्ड सेटिंग्स',
             advBuffer: 'स्पीच सेफ़्टी बफ़र', advFade: 'क्रॉसफ़ेड लंबाई',
             advGate: 'बैकग्राउंड नॉइज़ कमी', advLoud: 'लाउडनेस नॉर्मलाइज़ेशन',
-            advBreath: 'साँस की आवाज़ हटाएँ (स्मार्ट मोड)',
+            advBreath: 'साँस की आवाज़ हटाएँ',
             advTrimEnds: 'शुरुआत और अंत की ख़ामोशी पूरी हटाएँ',
             loudOff: 'बंद', gateOff: 'बंद',
             trimTitle: 'ट्रिम / रेंज निकालें', trimStart: 'शुरुआत', trimEnd: 'अंत',
@@ -1146,7 +1119,7 @@ self.onmessage = function (ev) {
             yes: 'हाँ, हटाएँ', no: 'रद्द करें',
             batchTitle: 'बैच क्यू', batchStart: 'सभी प्रोसेस करें', batchZip: 'सभी डाउनलोड करें (ZIP)',
             batchClear: 'क्यू साफ़ करें',
-            batchNote: 'सभी फ़ाइलें मौजूदा सेटिंग्स से प्रोसेस होंगी (स्मार्ट ऑटो हर फ़ाइल को अलग कैलिब्रेट करता है)।',
+            batchNote: 'सभी फ़ाइलें मौजूदा साइलेंस-डिटेक्शन सेटिंग्स से प्रोसेस होंगी।',
             stPending: 'प्रतीक्षा में', stProc: 'प्रोसेस हो रहा…', stDone: 'पूर्ण', stErr: 'विफल',
             ldRead: 'फ़ाइल पढ़ी जा रही है...', ldReadSub: 'ऑडियो मेमोरी में लोड हो रहा है',
             ldDecode: 'ऑडियो डिकोड हो रहा है...', ldDecodeSub: 'ऑफ़लाइन अनकम्प्रेस हो रहा है',
@@ -1183,9 +1156,6 @@ self.onmessage = function (ev) {
             upNote: 'Nota: los WAV grandes se leen por partes. Archivos muy largos (1h+) pueden ser lentos en teléfonos antiguos.',
             largeFile: 'Archivo grande: el procesamiento puede ser más lento en teléfonos antiguos.',
             cancel: 'Cancelar', change: 'Cambiar',
-            cutMode: 'Modo de corte', modeSmart: 'Auto inteligente', modeManual: 'Manual',
-            smartInfo: 'Ruido de fondo {floor} dB • Voz {speech} dB • Umbral auto {th} dB • Pausa típica {pause}s',
-            learnNote: 'Auto-corte ajustado con {n} correcciones tuyas',
             estLenTitle: 'Duración estimada tras la limpieza',
             savedBadge: 'Ahorrado {t} ({p}%)',
             bufNote: 'Incluye márgenes de seguridad y fundidos suaves para evitar cortes bruscos o clics.',
@@ -1201,7 +1171,7 @@ self.onmessage = function (ev) {
             advanced: 'Ajustes avanzados',
             advBuffer: 'Margen de seguridad de voz', advFade: 'Duración del fundido',
             advGate: 'Reducción de ruido de fondo', advLoud: 'Normalización de volumen',
-            advBreath: 'Eliminar respiraciones (modo inteligente)',
+            advBreath: 'Eliminar respiraciones',
             advTrimEnds: 'Recortar silencio inicial y final por completo',
             loudOff: 'No', gateOff: 'No',
             trimTitle: 'Recortar / Extraer rango', trimStart: 'Inicio', trimEnd: 'Fin',
@@ -1231,7 +1201,7 @@ self.onmessage = function (ev) {
             yes: 'Sí, descartar', no: 'Cancelar',
             batchTitle: 'Cola por lotes', batchStart: 'Procesar todo', batchZip: 'Descargar todo (ZIP)',
             batchClear: 'Vaciar cola',
-            batchNote: 'Todos los archivos se procesan con los ajustes actuales (el modo inteligente calibra cada archivo por separado).',
+            batchNote: 'Todos los archivos se procesan con los ajustes actuales de detección de silencio.',
             stPending: 'En espera', stProc: 'Procesando…', stDone: 'Listo', stErr: 'Error',
             ldRead: 'Leyendo archivo...', ldReadSub: 'Cargando audio en memoria',
             ldDecode: 'Decodificando audio...', ldDecodeSub: 'Descomprimiendo sin conexión',
@@ -1281,7 +1251,6 @@ self.onmessage = function (ev) {
         if (sel && sel.value !== S.lang) sel.value = S.lang;
         // dynamic labels that depend on language
         updateSliderLabels();
-        updateSmartInfo();
         renderCutList();
         updateEstimates();
     }
@@ -1293,7 +1262,6 @@ self.onmessage = function (ev) {
 
     // Persisted settings
     const S = {
-        mode: 'smart',            // 'smart' | 'manual'
         thresholdDB: -40,
         minPause: 0.5,
         bufferMs: 150,            // F17
@@ -1308,14 +1276,10 @@ self.onmessage = function (ev) {
         lang: 'en'
     };
 
-    // S19: learned corrections
-    let learn = { biasPause: 0, biasTh: 0, edits: 0 };
-
     // Per-file analysis state
     const A = {
         file: null, buffer: null,
         rms: null, peak: null, fps: 100,
-        floorDB: -60, speechDB: -20, autoTh: -40, medPause: 0.45,
         regions: [], kept: [], blockStatus: null,
         protectedIds: new Set(),
         trim: { start: 0, end: 0 },
@@ -1390,13 +1354,6 @@ self.onmessage = function (ev) {
                 const p = JSON.parse(raw);
                 for (const k in S) if (p[k] !== undefined) S[k] = p[k];
             }
-            const lr = localStorage.getItem('quietcut_learn');
-            if (lr) {
-                const p = JSON.parse(lr);
-                learn.biasPause = clamp(+p.biasPause || 0, 0, 0.3);
-                learn.biasTh = clamp(+p.biasTh || 0, -5, 0);
-                learn.edits = Math.max(0, Math.round(+p.edits || 0));
-            }
         } catch (e) {}
         S.thresholdDB = clamp(+S.thresholdDB || -40, -60, -20);
         S.minPause = clamp(+S.minPause || 0.5, 0.1, 3);
@@ -1407,10 +1364,6 @@ self.onmessage = function (ev) {
         if (!['mp3', 'wav', 'aac', 'opus'].includes(S.format)) S.format = 'mp3';
         if (![96, 128, 192, 320].includes(+S.mp3Kbps)) S.mp3Kbps = 128;
         if (!I18N[S.lang]) S.lang = 'en';
-        if (S.mode !== 'smart' && S.mode !== 'manual') S.mode = 'smart';
-    }
-    function saveLearn() {
-        try { localStorage.setItem('quietcut_learn', JSON.stringify(learn)); } catch (e) {}
     }
 
     // Push settings state into the controls
@@ -1426,10 +1379,6 @@ self.onmessage = function (ev) {
         $('mp3Bitrate').value = String(S.mp3Kbps);
         $('btnSpeed').textContent = S.rate + '×';
         $('btnSpeedRes').textContent = S.rate + '×';
-        $('modeSmartBtn').classList.toggle('mini-btn-active', S.mode === 'smart');
-        $('modeManualBtn').classList.toggle('mini-btn-active', S.mode === 'manual');
-        $('manualPanel').classList.toggle('hidden', S.mode !== 'manual');
-        $('smartPanel').classList.toggle('hidden', S.mode !== 'smart');
         updateSliderLabels();
         updateFormatCards();
     }
@@ -1439,7 +1388,7 @@ self.onmessage = function (ev) {
     // ---------------------------------------------------------------------
     function snapshotState() {
         return {
-            mode: S.mode, thresholdDB: S.thresholdDB, minPause: S.minPause,
+            thresholdDB: S.thresholdDB, minPause: S.minPause,
             bufferMs: S.bufferMs, fadeMs: S.fadeMs, gateAmt: S.gateAmt,
             loudTarget: S.loudTarget, removeBreaths: S.removeBreaths, trimEnds: S.trimEnds,
             protectedIds: Array.from(A.protectedIds),
@@ -1447,7 +1396,7 @@ self.onmessage = function (ev) {
         };
     }
     function applySnapshot(snap) {
-        S.mode = snap.mode; S.thresholdDB = snap.thresholdDB; S.minPause = snap.minPause;
+        S.thresholdDB = snap.thresholdDB; S.minPause = snap.minPause;
         S.bufferMs = snap.bufferMs; S.fadeMs = snap.fadeMs; S.gateAmt = snap.gateAmt;
         S.loudTarget = snap.loudTarget; S.removeBreaths = snap.removeBreaths; S.trimEnds = snap.trimEnds;
         A.protectedIds = new Set(snap.protectedIds);
@@ -1692,40 +1641,6 @@ self.onmessage = function (ev) {
     }
 
     // ---------------------------------------------------------------------
-    // SMART CALIBRATION (S1) + SPEAKER RHYTHM (S9)
-    // ---------------------------------------------------------------------
-    function percentile(sortedArr, p) {
-        if (!sortedArr.length) return -60;
-        const idx = clamp(Math.round(p * (sortedArr.length - 1)), 0, sortedArr.length - 1);
-        return sortedArr[idx];
-    }
-
-    function calibrate(rms, fps) {
-        const sorted = Array.from(rms).sort((a, b) => a - b);
-        const floorDB = percentile(sorted, 0.10);
-        const speechDB = percentile(sorted, 0.95);
-        let autoTh = floorDB + 0.35 * (speechDB - floorDB);
-        autoTh = clamp(autoTh, -65, -20);
-        autoTh = Math.min(autoTh, speechDB - 10);
-        autoTh = Math.max(autoTh, floorDB + 3);
-        // S9: measure the speaker's own pause rhythm at the auto threshold
-        const durations = [];
-        let inQ = false, qs = 0;
-        for (let i = 0; i <= rms.length; i++) {
-            const quiet = i < rms.length && rms[i] < autoTh;
-            if (quiet && !inQ) { inQ = true; qs = i; }
-            else if (!quiet && inQ) {
-                inQ = false;
-                const d = (i - qs) / fps;
-                if (d >= 0.15 && d <= 2.5) durations.push(d);
-            }
-        }
-        durations.sort((a, b) => a - b);
-        const medPause = durations.length ? durations[Math.floor(durations.length / 2)] : 0.45;
-        return { floorDB, speechDB, autoTh, medPause };
-    }
-
-    // ---------------------------------------------------------------------
     // DETECTION CORE (pure - reused by editor & batch)
     // S1 auto threshold • S7 pause classes • S8 shrink remainder
     // S9 rhythm scaling • S10 breath • S11 valley snap • S17 confidence
@@ -1738,7 +1653,6 @@ self.onmessage = function (ev) {
         const th = opts.thresholdDB;
         const minPause = opts.minPause;
         const buf = opts.bufferSec;
-        const smart = opts.mode === 'smart';
         const trim = opts.trim;
         const protectedIds = opts.protectedIds || new Set();
         const b0 = clamp(Math.floor(trim.start * fps), 0, n);
@@ -1790,13 +1704,9 @@ self.onmessage = function (ev) {
                 if (dur < 0.15) continue;
                 cls = isLead ? 'lead' : 'trail';
                 remainder = 0;
-            } else if (smart) {
-                if (dur < minPause) continue; // S7: micro-gaps inside sentences stay
-                if (dur < 1.0) { cls = 'sentence'; remainder = clamp(opts.medPause * 0.9, 0.2, 0.4); }
-                else { cls = 'paragraph'; remainder = clamp(opts.medPause * 0.6, 0.2, 0.4); }
             } else {
-                if (dur < minPause) continue;
-                cls = 'manual';
+                if (dur < minPause) continue; // micro-gaps inside sentences stay
+                cls = 'silence';
                 remainder = 0;
             }
 
@@ -1807,7 +1717,7 @@ self.onmessage = function (ev) {
 
             // S10: extend the cut through a breath right before speech resumes
             let breath = false;
-            if (smart && opts.removeBreaths && !isTrail && !isLead) {
+            if (opts.removeBreaths && !isTrail && !isLead) {
                 const scanEnd = Math.min(n, Math.round((run.e + 0.55) * fps));
                 let i = Math.round(run.e * fps);
                 let count = 0;
@@ -1838,15 +1748,18 @@ self.onmessage = function (ev) {
             const stabN = clamp(1 - stdev / 8, 0, 1);
             const conf = 0.5 * depthN + 0.25 * durN + 0.25 * stabN;
 
-            if (smart && conf < 0.35 && !isLead && !isTrail) { report.nSkipped++; continue; }
+            // Speech protection: a shallow / unstable "quiet" run is probably soft
+            // speech (not true silence), so never remove it — this is what stops
+            // the cutter from eating spoken lines.
+            if (conf < 0.35 && !isLead && !isTrail) { report.nSkipped++; continue; }
 
             let status;
             if (protectedIds.has(id)) { status = 'protected'; report.nProtected++; }
-            else if (smart && conf < 0.5 && !isLead && !isTrail) { status = 'review'; report.nReview++; }
+            else if (conf < 0.5 && !isLead && !isTrail) { status = 'review'; report.nReview++; }
             else status = 'cut';
 
             if (status !== 'protected') {
-                if (cls === 'sentence') report.nShrunk++; else report.nCut++;
+                report.nCut++;
                 if (breath) report.nBreath++;
                 report.saved += (ce - cs);
             }
@@ -1885,15 +1798,11 @@ self.onmessage = function (ev) {
         return { regions, kept, report, blockStatus };
     }
 
-    function detectionOpts(auto, protectedIds) {
-        // auto: {autoTh, medPause} from calibrate()
-        const smart = S.mode === 'smart';
+    function detectionOpts(protectedIds) {
         return {
-            mode: S.mode,
-            thresholdDB: smart ? clamp(auto.autoTh + learn.biasTh, -70, -20) : S.thresholdDB,
-            minPause: smart ? clamp(Math.max(0.35, auto.medPause * 0.7) + learn.biasPause, 0.3, 1.2) : S.minPause,
+            thresholdDB: S.thresholdDB,
+            minPause: S.minPause,
             bufferSec: S.bufferMs / 1000,
-            medPause: auto.medPause,
             removeBreaths: S.removeBreaths,
             trimEnds: S.trimEnds,
             protectedIds: protectedIds
@@ -1905,7 +1814,7 @@ self.onmessage = function (ev) {
     // ---------------------------------------------------------------------
     function recalc() {
         if (!A.buffer || !A.rms) return;
-        const opts = detectionOpts(A, A.protectedIds);
+        const opts = detectionOpts(A.protectedIds);
         opts.trim = { start: A.trim.start, end: A.trim.end };
         const res = runDetection(
             { rms: A.rms, peak: A.peak, fps: A.fps, duration: A.buffer.duration },
@@ -1926,28 +1835,10 @@ self.onmessage = function (ev) {
         $('btnCleanAudio').disabled = A.kept.length === 0;
         $('btnCleanAudio').classList.toggle('opacity-40', A.kept.length === 0);
 
-        updateSmartInfo();
         renderCutList();
         updateEstimates();
         renderWaveBase();
         drawWave();
-    }
-
-    function updateSmartInfo() {
-        if (!$('smartInfo')) return;
-        if (!A.buffer) { $('smartInfo').textContent = ''; return; }
-        const th = clamp(A.autoTh + learn.biasTh, -70, -20);
-        $('smartInfo').textContent = t('smartInfo', {
-            floor: A.floorDB.toFixed(1),
-            speech: A.speechDB.toFixed(1),
-            th: th.toFixed(1),
-            pause: A.medPause.toFixed(2)
-        });
-        const note = $('learnNote');
-        if (learn.edits > 0 && (Math.abs(learn.biasPause) > 0.01 || Math.abs(learn.biasTh) > 0.1)) {
-            note.classList.remove('hidden');
-            $('learnNoteText').textContent = t('learnNote', { n: learn.edits });
-        } else note.classList.add('hidden');
     }
 
     // F41: processing time & size estimates
@@ -1978,7 +1869,7 @@ self.onmessage = function (ev) {
             box.appendChild(p);
             return;
         }
-        const clsKey = { sentence: 'clsSentence', paragraph: 'clsParagraph', manual: 'clsManual', lead: 'clsLead', trail: 'clsTrail' };
+        const clsKey = { silence: 'clsManual', lead: 'clsLead', trail: 'clsTrail' };
         regions.forEach((r, idx) => {
             const row = document.createElement('div');
             row.className = 'cut-row';
@@ -2024,20 +1915,14 @@ self.onmessage = function (ev) {
         vib(10);
     }
 
-    // F19 + S19: restore/re-cut a region and learn from it
+    // F19: restore / re-cut a region
     function toggleProtect(id) {
         markUndoPoint();
         if (A.protectedIds.has(id)) {
             A.protectedIds.delete(id);
-            learn.biasPause *= 0.85;
-            learn.biasTh *= 0.85;
         } else {
             A.protectedIds.add(id);
-            learn.biasPause = clamp(learn.biasPause + 0.03, 0, 0.25);
-            learn.biasTh = clamp(learn.biasTh - 0.4, -4, 0);
-            learn.edits++;
         }
-        saveLearn();
         commitUndoable();
         recalc();
         vib(15);
@@ -2097,12 +1982,14 @@ self.onmessage = function (ev) {
         const midY = h / 2;
         const maxBarH = h * 0.88;
 
-        // A10: staggered grow-in on first render after load
+        // A10: left-to-right reveal on the first render after a file loads
         let growT = 1;
         if (growAnimating && nowTs) {
-            growT = clamp((nowTs - growStart) / 650, 0, 1);
+            growT = clamp((nowTs - growStart) / 900, 0, 1);
             if (growT >= 1) growAnimating = false;
         }
+        // eased position (0..1) of the reveal's leading edge as it sweeps across
+        const revEdge = growT < 1 ? 1 - Math.pow(1 - growT, 2) : 1;
 
         for (const pass of [0, 1]) {
             const ctx = (pass === 0 ? waveDim : waveBright).getContext('2d');
@@ -2131,27 +2018,43 @@ self.onmessage = function (ev) {
                 if (allOut) st = 4; else if (hasCut) st = 1; else if (hasRev) st = 2; else if (hasProt) st = 3;
 
                 const x = bIdx * step;
+
+                // Reveal: each bar rises + fades in as the sweep edge passes it
+                let ratio = clamp((pk + 70) / 70, 0.045, 1);
+                let local = 1;
+                if (growT < 1) {
+                    local = clamp((revEdge - (bIdx / nBars)) / 0.18, 0, 1);
+                    ratio *= (1 - Math.pow(1 - local, 3));
+                    ctx.globalAlpha = local;
+                }
+                const bh = Math.max(2 * dpr, ratio * maxBarH);
+                const y = midY - bh / 2;
+                const r = Math.min(barW / 2, bh / 2);
+
                 // Full-height tint band behind removed/flagged bars
                 if (st === 1 || st === 2 || st === 3) {
                     ctx.fillStyle = st === 1 ? 'rgba(244,63,94,0.13)' : st === 2 ? 'rgba(245,158,11,0.10)' : 'rgba(45,212,191,0.08)';
                     ctx.fillRect(x, 0, step, h);
                 }
-                let ratio = clamp((pk + 70) / 70, 0.045, 1);
-                // grow-in stagger: bars near the left rise first
-                if (growT < 1) {
-                    const local = clamp((growT * 1.7 - (bIdx / nBars) * 0.7), 0, 1);
-                    ratio *= (1 - Math.pow(1 - local, 3));
-                }
-                const bh = Math.max(2 * dpr, ratio * maxBarH);
-                const y = midY - bh / 2;
                 const col = statusColor(st, bright);
                 ctx.fillStyle = col || grad;
-                const r = Math.min(barW / 2, bh / 2);
                 if (ctx.roundRect) {
                     ctx.beginPath();
                     ctx.roundRect(x, y, barW, bh, r);
                     ctx.fill();
                 } else ctx.fillRect(x, y, barW, bh);
+
+                // Bright crest glow right at the leading edge of the sweep
+                if (growT < 1 && local > 0.02 && local < 0.55) {
+                    ctx.globalAlpha = (0.55 - local);
+                    ctx.fillStyle = '#a7f3d0';
+                    if (ctx.roundRect) {
+                        ctx.beginPath();
+                        ctx.roundRect(x, y, barW, bh, r);
+                        ctx.fill();
+                    } else ctx.fillRect(x, y, barW, bh);
+                }
+                if (growT < 1) ctx.globalAlpha = 1;
             }
             // Center hairline
             ctx.fillStyle = bright ? 'rgba(148,163,184,0.25)' : 'rgba(148,163,184,0.15)';
@@ -2217,6 +2120,9 @@ self.onmessage = function (ev) {
     function startGrowAnim() {
         growStart = performance.now();
         growAnimating = true;
+        // paint the first reveal frame now so there's no flash of the full wave
+        renderWaveBase(growStart);
+        drawWave();
         ensureRaf();
     }
 
@@ -2558,9 +2464,6 @@ self.onmessage = function (ev) {
 
             A.buffer = buffer;
             A.rms = env.rms; A.peak = env.peak; A.fps = env.fps;
-            const cal = calibrate(env.rms, env.fps);
-            A.floorDB = cal.floorDB; A.speechDB = cal.speechDB;
-            A.autoTh = cal.autoTh; A.medPause = cal.medPause;
             A.trim = { start: 0, end: buffer.duration };
             A.protectedIds = new Set();
             A.cleaned = null; A.cleanedReport = null;
@@ -2591,7 +2494,7 @@ self.onmessage = function (ev) {
     // CLEANING (rebuild in worker: F9, F17 fades, F14 gate, F15 loudness)
     // ---------------------------------------------------------------------
     function effectiveThresholdDB() {
-        return S.mode === 'smart' ? clamp(A.autoTh + learn.biasTh, -70, -20) : S.thresholdDB;
+        return S.thresholdDB;
     }
 
     async function rebuildBuffer(buffer, kept, onProg, thDB) {
@@ -3110,12 +3013,11 @@ self.onmessage = function (ev) {
         if (token !== jobToken) throw new Error('cancelled');
         const env = await computeEnvelope(buffer, (p) => updateBatchRow(item, 0.35 + p * 0.2));
         if (token !== jobToken) throw new Error('cancelled');
-        const auto = calibrate(env.rms, env.fps);
-        const opts = detectionOpts(auto, new Set());
+        const opts = detectionOpts(new Set());
         opts.trim = { start: 0, end: buffer.duration };
         const det = runDetection({ rms: env.rms, peak: env.peak, fps: env.fps, duration: buffer.duration }, opts);
         if (!det.kept.length) throw new Error('Nothing kept after detection');
-        const thDB = S.mode === 'smart' ? clamp(auto.autoTh + learn.biasTh, -70, -20) : S.thresholdDB;
+        const thDB = S.thresholdDB;
         const rebuilt = await rebuildBuffer(buffer, det.kept, (p) => updateBatchRow(item, 0.55 + p * 0.25), thDB);
         if (token !== jobToken) throw new Error('cancelled');
         const blob = await encodeBlob(rebuilt.buffer, S.format, (p) => updateBatchRow(item, 0.8 + p * 0.2), item.file);
@@ -3248,16 +3150,6 @@ self.onmessage = function (ev) {
     // ---------------------------------------------------------------------
     // MODE / PRESETS
     // ---------------------------------------------------------------------
-    function setMode(m) {
-        if (S.mode === m) return;
-        userChange(() => {
-            S.mode = m;
-            syncControlsFromSettings();
-            saveSettings();
-            recalc();
-        });
-        vib(12);
-    }
     function setQuietnessPreset(v) {
         userChange(() => {
             S.thresholdDB = v;
