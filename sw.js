@@ -1,5 +1,7 @@
-/* QuietCut Service Worker - true offline support (F1) */
-const CACHE = 'quietcut-v2';
+/* QuietCut Service Worker - true offline support (F1)
+   Strategy: network-first for the page itself (fixes reach users
+   immediately when online), cache-first for static assets. */
+const CACHE = 'quietcut-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -7,8 +9,6 @@ const ASSETS = [
   './manifest.webmanifest',
   './icon.svg'
 ];
-/* Third-party runtime (Tailwind browser build) - cached best-effort so the app
-   styles keep working with zero network after the first visit. */
 const CDN_ASSETS = [
   'https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'
 ];
@@ -32,23 +32,45 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
+function isPageRequest(req) {
+  if (req.mode === 'navigate') return true;
+  const url = new URL(req.url);
+  return url.origin === location.origin && /(\/|index\.html)$/.test(url.pathname);
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
+  if (isPageRequest(req)) {
+    // Network-first: always serve the latest app when online
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(req);
+        if (res && res.ok) {
+          const cache = await caches.open(CACHE);
+          cache.put(req, res.clone());
+        }
+        return res;
+      } catch (err) {
+        const cached = await caches.match(req, { ignoreSearch: true }) ||
+                       await caches.match('./index.html');
+        if (cached) return cached;
+        throw err;
+      }
+    })());
+    return;
+  }
+
+  // Static assets: cache-first with background refresh on miss
   event.respondWith((async () => {
     const cached = await caches.match(req, { ignoreSearch: true });
     if (cached) return cached;
-    try {
-      const res = await fetch(req);
-      if (res && (res.ok || res.type === 'opaque')) {
-        const cache = await caches.open(CACHE);
-        cache.put(req, res.clone());
-      }
-      return res;
-    } catch (err) {
-      const fallback = await caches.match('./index.html');
-      if (fallback && req.mode === 'navigate') return fallback;
-      throw err;
+    const res = await fetch(req);
+    if (res && (res.ok || res.type === 'opaque')) {
+      const cache = await caches.open(CACHE);
+      cache.put(req, res.clone());
     }
+    return res;
   })());
 });
