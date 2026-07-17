@@ -460,12 +460,32 @@
                     <div class="grid grid-cols-2 gap-2.5">
                         <div onclick="setExportFormat('mp3')" id="formatOptionMp3" class="fmt-option selected cursor-pointer rounded-xl p-3 flex items-start gap-2.5">
                             <div class="w-5 h-5 rounded-full grid place-items-center mt-0.5 shrink-0" style="border:2px solid var(--accent)"><div id="radioDotMp3" class="w-2.5 h-2.5 rounded-full" style="background:var(--accent)"></div></div>
-                            <div><div class="font-black text-sm">MP3</div><p class="text-[11px] mt-0.5" style="color:var(--text-dim)">128kbps · small size</p></div>
+                            <div><div class="font-black text-sm">MP3</div><p class="text-[11px] mt-0.5" style="color:var(--text-dim)">Compressed · pick quality below</p></div>
                         </div>
                         <div onclick="setExportFormat('wav')" id="formatOptionWav" class="fmt-option cursor-pointer rounded-xl p-3 flex items-start gap-2.5">
                             <div class="w-5 h-5 rounded-full grid place-items-center mt-0.5 shrink-0" style="border:2px solid var(--text-soft)"><div id="radioDotWav" class="w-2.5 h-2.5 rounded-full" style="background:transparent"></div></div>
                             <div><div class="font-black text-sm">WAV</div><p class="text-[11px] mt-0.5" style="color:var(--text-dim)">Uncompressed · best quality</p></div>
                         </div>
+                    </div>
+
+                    <!-- MP3 bitrate / quality selector -->
+                    <div id="bitrateRow" class="mt-3">
+                        <label class="text-xs font-black block mb-2 uppercase tracking-wider" style="color:var(--text-dim)">MP3 Quality</label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button type="button" data-kbps="128" onclick="setBitrate(128)" class="br-chip fmt-option rounded-xl py-2.5 text-center">
+                                <span class="block font-black text-sm">128</span><span class="block text-[9px]" style="color:var(--text-dim)">kbps</span>
+                            </button>
+                            <button type="button" data-kbps="192" onclick="setBitrate(192)" class="br-chip fmt-option rounded-xl py-2.5 text-center">
+                                <span class="block font-black text-sm">192</span><span class="block text-[9px]" style="color:var(--text-dim)">kbps</span>
+                            </button>
+                            <button type="button" data-kbps="256" onclick="setBitrate(256)" class="br-chip fmt-option rounded-xl py-2.5 text-center">
+                                <span class="block font-black text-sm">256</span><span class="block text-[9px]" style="color:var(--text-dim)">kbps</span>
+                            </button>
+                            <button type="button" data-kbps="320" onclick="setBitrate(320)" class="br-chip fmt-option selected rounded-xl py-2.5 text-center">
+                                <span class="block font-black text-sm">320</span><span class="block text-[9px]" style="color:var(--text-dim)">HQ</span>
+                            </button>
+                        </div>
+                        <p class="text-[10px] mt-1.5" style="color:var(--text-soft)">Higher bitrate = better sound, larger file. 320 kbps is maximum MP3 quality.</p>
                     </div>
                 </div>
 
@@ -498,6 +518,7 @@
          */
         let audioCtx = null, originalBuffer = null, cleanedBuffer = null, envelopeData = null;
         let keptIntervals = [], removedIntervals = [], originalFile = null, exportFormat = 'mp3';
+        let mp3Bitrate = 320; // default to highest quality MP3
         let activeAudioSource = null, isPlayingRaw = false, isPlayingResult = false;
         let playbackStartTime = 0, playbackOffset = 0, playbackIntervalId = null;
         let currentResultSourceType = 'cleaned';
@@ -702,7 +723,7 @@
             document.querySelectorAll('.js-ring').forEach(r => r.style.background = `conic-gradient(var(--accent) ${deg}deg, var(--ring-track) ${deg}deg)`);
         }
 
-        /* ---------------- Waveform: TEAL SPINDLES ---------------- */
+        /* ---------------- Waveform: CapCut-natural ---------------- */
         function resizeWaveformCanvas() {
             const container = document.getElementById('waveformContainer');
             const canvas = document.getElementById('waveformCanvas');
@@ -735,28 +756,40 @@
             const headCol = (theme === 'neumorph') ? '#334155' : '#0f172a';
             const CUT = '#f43f5e';
 
-            // Sample envelope into a fixed number of buckets (fast & smooth at any length)
-            const BUCKETS = Math.min(340, Math.max(2, total));
-            const amp = new Float32Array(BUCKETS);
+            // Downsample envelope into FEW control points, then smooth heavily.
+            // Few points + smoothing = big rounded organic lobes (not jagged spikes).
+            const BUCKETS = Math.min(80, Math.max(2, total));
+            let amp = new Float32Array(BUCKETS);
             const removed = new Uint8Array(BUCKETS);
             for (let b = 0; b < BUCKETS; b++) {
                 const s = Math.floor(b * total / BUCKETS);
                 const e = Math.max(s + 1, Math.floor((b + 1) * total / BUCKETS));
                 let peak = -Infinity;
                 for (let i = s; i < e && i < total; i++) if (envelopeData[i] > peak) peak = envelopeData[i];
-                amp[b] = Math.min(1, Math.max(0, (peak + 60) / 60));
+                // higher-contrast dB → ratio mapping so quiet parts dip and loud parts bloom
+                amp[b] = Math.min(1, Math.max(0, (peak + 52) / 46));
                 const tMid = ((b + 0.5) / BUCKETS) * dur;
                 for (const rem of removedIntervals) { if (tMid >= rem.start && tMid <= rem.end) { removed[b] = 1; break; } }
             }
 
             // Long natural attack/release tapers (gentle exponential decay both directions)
-            const DECAY = 0.80;
+            const DECAY = 0.72;
             for (let b = 1; b < BUCKETS; b++) amp[b] = Math.max(amp[b], amp[b - 1] * DECAY);
             for (let b = BUCKETS - 2; b >= 0; b--) amp[b] = Math.max(amp[b], amp[b + 1] * DECAY);
             // Cut zones collapse to the flat baseline line
             for (let b = 0; b < BUCKETS; b++) if (removed[b]) amp[b] = 0;
+            // Heavy multi-pass smoothing → rounded, beautiful lobes
+            for (let pass = 0; pass < 2; pass++) {
+                const nb = new Float32Array(BUCKETS);
+                for (let b = 0; b < BUCKETS; b++) {
+                    let sum = 0, cnt = 0;
+                    for (let k = Math.max(0, b - 2); k < Math.min(BUCKETS, b + 3); k++) { sum += amp[k]; cnt++; }
+                    nb[b] = sum / cnt;
+                }
+                amp = nb;
+            }
 
-            const FLOOR = Math.max(1.2, h * 0.010);   // px half-thickness of the silent line
+            const FLOOR = Math.max(1.2, h * 0.012);   // px half-thickness of the silent line
             const scale = mid * 0.90;
             const X = (b) => (b / (BUCKETS - 1)) * w;
             const YT = (b) => mid - Math.max(amp[b] * scale, FLOOR);
@@ -966,13 +999,23 @@
             document.getElementById('formatOptionWav').classList.toggle('selected', fmt === 'wav');
             document.getElementById('radioDotMp3').style.background = (fmt === 'mp3') ? 'var(--accent)' : 'transparent';
             document.getElementById('radioDotWav').style.background = (fmt === 'wav') ? 'var(--accent)' : 'transparent';
+            // Bitrate options only apply to MP3
+            document.getElementById('bitrateRow').style.display = (fmt === 'mp3') ? 'block' : 'none';
+        }
+
+        function setBitrate(kbps) {
+            mp3Bitrate = kbps;
+            document.querySelectorAll('.br-chip').forEach(el => {
+                el.classList.toggle('selected', parseInt(el.dataset.kbps, 10) === kbps);
+            });
         }
 
         async function downloadCleanedFile() {
             if (!cleanedBuffer || !originalFile) return;
             stopAllAudio();
             const origName = originalFile.name.substring(0, originalFile.name.lastIndexOf('.')) || originalFile.name;
-            const fileName = `${origName} - v1.0.${exportFormat}`;
+            const qualityTag = (exportFormat === 'mp3') ? `${mp3Bitrate}k` : 'wav';
+            const fileName = `${origName} - ${qualityTag}.${exportFormat}`;
             showSection('loadingSection');
             updateProgress(10, `Encoding ${exportFormat.toUpperCase()}...`, "Converting cleaned audio offline...");
             setTimeout(async () => {
@@ -982,7 +1025,7 @@
                         updateProgress(50, "Writing WAV PCM...", "Building uncompressed file");
                         blob = exportWavBlob(cleanedBuffer);
                     } else {
-                        blob = await exportMp3BlobAsync(cleanedBuffer, (prog) => updateProgress(10 + Math.round(prog * 80), "Encoding MP3 (128kbps)...", `Compressing offline (${Math.round(prog * 100)}%)`));
+                        blob = await exportMp3BlobAsync(cleanedBuffer, mp3Bitrate, (prog) => updateProgress(10 + Math.round(prog * 80), `Encoding MP3 (${mp3Bitrate}kbps)...`, `Compressing offline (${Math.round(prog * 100)}%)`));
                     }
                     updateProgress(100, "Download Starting!", "Saving to your phone");
                     const url = URL.createObjectURL(blob);
@@ -1024,11 +1067,12 @@
         }
         function writeString(view, offset, string) { for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i)); }
 
-        function exportMp3BlobAsync(audioBuffer, onProgress) {
+        function exportMp3BlobAsync(audioBuffer, kbps, onProgress) {
             return new Promise((resolve, reject) => {
                 if (typeof lamejs === 'undefined') { reject(new Error("lamejs not loaded. Use WAV format.")); return; }
                 const channels = audioBuffer.numberOfChannels, sampleRate = audioBuffer.sampleRate;
-                const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, 128);
+                const bitrate = [128, 192, 256, 320].includes(kbps) ? kbps : 128;
+                const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, bitrate);
                 const mp3Data = [];
                 const leftFloat = audioBuffer.getChannelData(0);
                 const rightFloat = channels > 1 ? audioBuffer.getChannelData(1) : null;
