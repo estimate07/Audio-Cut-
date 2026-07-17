@@ -501,6 +501,7 @@
         let activeAudioSource = null, isPlayingRaw = false, isPlayingResult = false;
         let playbackStartTime = 0, playbackOffset = 0, playbackIntervalId = null;
         let currentResultSourceType = 'cleaned';
+        let playheadRatio = 1; // 0..1 playback position within original (1 = full solid at rest)
 
         const ENVELOPE_FPS = 100, SPEECH_BUFFER_SEC = 0.15, FADE_DURATION_SEC = 0.075;
 
@@ -596,7 +597,7 @@
         async function handleFileSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
-            stopAllAudio(); hideError(); originalFile = file;
+            stopAllAudio(); hideError(); originalFile = file; playheadRatio = 1;
 
             document.getElementById('displayFileName').textContent = file.name;
             const ext = file.name.split('.').pop().toUpperCase();
@@ -711,6 +712,14 @@
             canvas.height = Math.max(1, rect.height * dpr);
         }
 
+        /**
+         * CapCut-style natural waveform:
+         *  - continuous mirrored fill
+         *  - silence collapses to a thin flat baseline (never disappears)
+         *  - long attack/release tapers so lobes swell in & fade out gently
+         *  - played portion (left of playhead) uses teal gradient, unplayed is muted
+         *  - removed/cut zones tinted coral with a centered dot
+         */
         function renderWaveform() {
             const canvas = document.getElementById('waveformCanvas');
             if (!canvas || !envelopeData || !originalBuffer) return;
@@ -718,80 +727,88 @@
             const w = canvas.width, h = canvas.height, mid = h / 2;
             ctx.clearRect(0, 0, w, h);
 
-            const total = envelopeData.length;
-            const dur = originalBuffer.duration;
+            const total = envelopeData.length, dur = originalBuffer.duration;
+            const theme = document.documentElement.getAttribute('data-theme');
+            const played0 = (theme === 'neumorph') ? '#10b981' : '#22c3d6';
+            const played1 = '#0e7c8a';
+            const unplayed = (theme === 'neumorph') ? '#a9d8cc' : '#a5dde2';
+            const headCol = (theme === 'neumorph') ? '#334155' : '#0f172a';
+            const CUT = '#f43f5e';
 
-            // Removed mask per block
-            const removed = new Uint8Array(total);
+            // Sample envelope into a fixed number of buckets (fast & smooth at any length)
+            const BUCKETS = Math.min(340, Math.max(2, total));
+            const amp = new Float32Array(BUCKETS);
+            const removed = new Uint8Array(BUCKETS);
+            for (let b = 0; b < BUCKETS; b++) {
+                const s = Math.floor(b * total / BUCKETS);
+                const e = Math.max(s + 1, Math.floor((b + 1) * total / BUCKETS));
+                let peak = -Infinity;
+                for (let i = s; i < e && i < total; i++) if (envelopeData[i] > peak) peak = envelopeData[i];
+                amp[b] = Math.min(1, Math.max(0, (peak + 60) / 60));
+                const tMid = ((b + 0.5) / BUCKETS) * dur;
+                for (const rem of removedIntervals) { if (tMid >= rem.start && tMid <= rem.end) { removed[b] = 1; break; } }
+            }
+
+            // Long natural attack/release tapers (gentle exponential decay both directions)
+            const DECAY = 0.80;
+            for (let b = 1; b < BUCKETS; b++) amp[b] = Math.max(amp[b], amp[b - 1] * DECAY);
+            for (let b = BUCKETS - 2; b >= 0; b--) amp[b] = Math.max(amp[b], amp[b + 1] * DECAY);
+            // Cut zones collapse to the flat baseline line
+            for (let b = 0; b < BUCKETS; b++) if (removed[b]) amp[b] = 0;
+
+            const FLOOR = Math.max(1.2, h * 0.010);   // px half-thickness of the silent line
+            const scale = mid * 0.90;
+            const X = (b) => (b / (BUCKETS - 1)) * w;
+            const YT = (b) => mid - Math.max(amp[b] * scale, FLOOR);
+            const YB = (b) => mid + Math.max(amp[b] * scale, FLOOR);
+
+            // Build the smooth mirrored shape path (top L→R, bottom R→L)
+            function shapePath() {
+                ctx.beginPath();
+                ctx.moveTo(X(0), YT(0));
+                for (let b = 1; b < BUCKETS; b++) { const x0 = X(b - 1), x1 = X(b); ctx.quadraticCurveTo(x0 + (x1 - x0) / 2, YT(b - 1), x1, YT(b)); }
+                ctx.lineTo(X(BUCKETS - 1), YB(BUCKETS - 1));
+                for (let b = BUCKETS - 2; b >= 0; b--) { const x0 = X(b + 1), x1 = X(b); ctx.quadraticCurveTo(x0 + (x1 - x0) / 2, YB(b + 1), x1, YB(b)); }
+                ctx.closePath();
+            }
+
+            // Faint coral tint over cut zones
+            ctx.fillStyle = 'rgba(244,63,94,0.10)';
             for (const rem of removedIntervals) {
-                const a = Math.max(0, Math.floor((rem.start / dur) * total));
-                const b = Math.min(total, Math.ceil((rem.end / dur) * total));
-                for (let i = a; i < b; i++) removed[i] = 1;
+                const x = (rem.start / dur) * w, ww = ((rem.end - rem.start) / dur) * w;
+                ctx.fillRect(x, 0, Math.max(1, ww), h);
             }
 
-            // Dashed baseline
-            ctx.strokeStyle = 'rgba(20,184,166,0.28)';
-            ctx.lineWidth = Math.max(1, h * 0.012);
-            ctx.setLineDash([ctx.lineWidth, ctx.lineWidth * 4]);
-            ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(w, mid); ctx.stroke();
-            ctx.setLineDash([]);
+            // Unplayed (muted) base fill
+            shapePath(); ctx.fillStyle = unplayed; ctx.fill();
 
-            // Vertical teal gradient reused for all spindles
-            const grad = ctx.createLinearGradient(0, mid - mid * 0.92, 0, mid + mid * 0.92);
-            grad.addColorStop(0, '#14b8a6');
-            grad.addColorStop(1, '#0e7490');
-
-            const scale = mid * 0.92;
-            const amp = (i) => Math.min(1, Math.max(0.05, (envelopeData[i] + 60) / 60));
-
-            // Draw each contiguous speech segment as a smooth tapered spindle
-            let i = 0;
-            while (i < total) {
-                if (removed[i]) { i++; continue; }
-                const s = i;
-                while (i < total && !removed[i]) i++;
-                const e = i; // [s, e)
-                drawSpindle(ctx, s, e, total, w, mid, scale, amp, grad);
+            // Played gradient, clipped to the playhead
+            const px = Math.max(0, Math.min(1, playheadRatio)) * w;
+            if (px > 0.5) {
+                ctx.save();
+                ctx.beginPath(); ctx.rect(0, 0, px, h); ctx.clip();
+                shapePath();
+                const g = ctx.createLinearGradient(0, mid - scale, 0, mid + scale);
+                g.addColorStop(0, played0); g.addColorStop(1, played1);
+                ctx.fillStyle = g; ctx.fill();
+                ctx.restore();
             }
 
-            // Coral dots at each cut center
-            ctx.fillStyle = '#f43f5e';
+            // Coral dot at each cut center
+            ctx.fillStyle = CUT;
             const r = Math.max(2, w * 0.004);
             for (const rem of removedIntervals) {
                 const cx = (((rem.start + rem.end) / 2) / dur) * w;
                 ctx.beginPath(); ctx.arc(cx, mid, r, 0, Math.PI * 2); ctx.fill();
             }
-        }
 
-        function drawSpindle(ctx, s, e, total, w, mid, scale, amp, grad) {
-            const L = e - s;
-            const taper = (k) => {
-                const t = Math.min((k - s) / Math.max(L * 0.42, 1), (e - 1 - k) / Math.max(L * 0.42, 1), 1);
-                return Math.sin(Math.min(Math.max(t, 0), 1) * Math.PI / 2);
-            };
-            const step = Math.max(1, Math.floor(L / 60));
-            const idx = [];
-            for (let k = s; k < e; k += step) idx.push(k);
-            if (idx[idx.length - 1] !== e - 1) idx.push(e - 1);
-
-            const X = (k) => (k / total) * w;
-            const up = idx.map(k => [X(k), mid - Math.max(amp(k) * taper(k), 0.012) * scale]);
-            const lo = idx.slice().reverse().map(k => [X(k), mid + Math.max(amp(k) * taper(k), 0.012) * scale]);
-
-            ctx.beginPath();
-            ctx.moveTo(up[0][0], up[0][1]);
-            for (let k = 1; k < up.length; k++) {
-                const [x0, y0] = up[k - 1], [x1, y1] = up[k];
-                ctx.quadraticCurveTo(x0 + (x1 - x0) / 2, y0, x1, y1);
+            // Playhead line (only while scrubbed/playing, not at rest)
+            if (playheadRatio < 0.999 && px > 0.5) {
+                ctx.strokeStyle = headCol; ctx.globalAlpha = 0.8;
+                ctx.lineWidth = Math.max(1.5, w * 0.0022);
+                ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
+                ctx.globalAlpha = 1;
             }
-            ctx.lineTo(lo[0][0], lo[0][1]);
-            for (let k = 1; k < lo.length; k++) {
-                const [x0, y0] = lo[k - 1], [x1, y1] = lo[k];
-                ctx.quadraticCurveTo(x0 + (x1 - x0) / 2, y0, x1, y1);
-            }
-            ctx.closePath();
-            ctx.fillStyle = grad;
-            ctx.fill();
         }
 
         /* ---------------- Cleaning ---------------- */
@@ -870,10 +887,9 @@
             else {
                 playAudioBuffer(originalBuffer, playbackOffset, (t) => {
                     document.getElementById('rawPlaybackTime').textContent = `${formatTime(t)} / ${formatTime(originalBuffer.duration)}`;
-                    const line = document.getElementById('playheadLine');
-                    line.classList.remove('hidden');
-                    line.style.left = `${Math.min(100, (t / originalBuffer.duration) * 100)}%`;
-                }, () => stopAllAudio());
+                    playheadRatio = Math.min(1, t / originalBuffer.duration);
+                    renderWaveform();
+                }, () => { playheadRatio = 1; stopAllAudio(); renderWaveform(); });
                 isPlayingRaw = true;
                 document.getElementById('iconPlayRaw').classList.add('hidden');
                 document.getElementById('iconPauseRaw').classList.remove('hidden');
@@ -883,8 +899,8 @@
         function seekRawAudioTo(timeSec) {
             const wasPlaying = isPlayingRaw; stopAllAudio(); playbackOffset = timeSec;
             document.getElementById('rawPlaybackTime').textContent = `${formatTime(timeSec)} / ${formatTime(originalBuffer.duration)}`;
-            const line = document.getElementById('playheadLine');
-            line.classList.remove('hidden'); line.style.left = `${(timeSec / originalBuffer.duration) * 100}%`;
+            playheadRatio = Math.min(1, timeSec / originalBuffer.duration);
+            renderWaveform();
             if (wasPlaying) toggleRawPreview();
         }
         function toggleResultPlayback() {
@@ -1062,6 +1078,7 @@
             stopAllAudio();
             originalBuffer = cleanedBuffer = envelopeData = originalFile = null;
             keptIntervals = []; removedIntervals = [];
+            playheadRatio = 1;
             document.getElementById('fileInput').value = "";
             showSection('uploadSection');
         }
