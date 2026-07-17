@@ -400,6 +400,56 @@
                 </div>
             </div>
 
+            <!-- ADVANCED CUTTING OPTIONS (all optional) -->
+            <div class="card p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <p class="text-[10px] uppercase font-bold tracking-widest" style="color:var(--text-soft)">Cutting Options <span style="opacity:.6">· optional</span></p>
+                    <button type="button" onclick="resetCuttingSettings()" class="soft-btn text-[10px] font-black px-3 py-1.5 rounded-full flex items-center gap-1" style="color:var(--accent)">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12a7.5 7.5 0 1113.5 4.5M4.5 12V7.5M4.5 12H9"/></svg>
+                        Reset
+                    </button>
+                </div>
+
+                <!-- 1. Cut strength one-tap modes -->
+                <div>
+                    <p class="text-[11px] font-bold mb-1.5" style="color:var(--text-dim)">Cut strength</p>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button type="button" data-mode="gentle" onclick="setStrength('gentle')" class="str-chip fmt-option rounded-xl py-2 text-center text-[11px] font-black">Gentle</button>
+                        <button type="button" data-mode="balanced" onclick="setStrength('balanced')" class="str-chip fmt-option selected rounded-xl py-2 text-center text-[11px] font-black">Balanced</button>
+                        <button type="button" data-mode="aggressive" onclick="setStrength('aggressive')" class="str-chip fmt-option rounded-xl py-2 text-center text-[11px] font-black">Aggr.</button>
+                        <button type="button" data-mode="max" onclick="setStrength('max')" class="str-chip fmt-option rounded-xl py-2 text-center text-[11px] font-black">Max</button>
+                    </div>
+                </div>
+
+                <!-- 2. Long pauses: remove vs cap -->
+                <div>
+                    <p class="text-[11px] font-bold mb-1.5" style="color:var(--text-dim)">Long pauses</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" data-pm="remove" onclick="setPauseMode('remove')" class="pm-chip fmt-option selected rounded-xl py-2 text-center text-[11px] font-black">Remove fully</button>
+                        <button type="button" data-pm="cap" onclick="setPauseMode('cap')" class="pm-chip fmt-option rounded-xl py-2 text-center text-[11px] font-black">Shorten &amp; keep a little</button>
+                    </div>
+                    <div id="capSliderRow" class="mt-3" style="display:none">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[11px]" style="color:var(--text-dim)">Keep at most</span>
+                            <span id="capLabel" class="text-sm font-black font-mono" style="color:var(--accent)">0.3s</span>
+                        </div>
+                        <input type="range" id="pauseCapSlider" min="0.2" max="1.0" step="0.1" value="0.3">
+                        <div class="flex justify-between text-[9px] mt-1.5" style="color:var(--text-soft)"><span>0.2s (tighter)</span><span>1.0s (gentler)</span></div>
+                    </div>
+                </div>
+
+                <!-- 3. Trim tightness (with safety floor) -->
+                <div>
+                    <p class="text-[11px] font-bold mb-1.5" style="color:var(--text-dim)">Trim tightness</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" data-tight="0.20" onclick="setTightness(0.20)" class="tt-chip fmt-option rounded-xl py-2 text-center text-[11px] font-black">Loose</button>
+                        <button type="button" data-tight="0.15" onclick="setTightness(0.15)" class="tt-chip fmt-option selected rounded-xl py-2 text-center text-[11px] font-black">Natural</button>
+                        <button type="button" data-tight="0.08" onclick="setTightness(0.08)" class="tt-chip fmt-option rounded-xl py-2 text-center text-[11px] font-black">Tight</button>
+                    </div>
+                    <p class="text-[10px] mt-1.5" style="color:var(--text-soft)">Tighter trims closer to speech — always kept safe so words never clip.</p>
+                </div>
+            </div>
+
             <!-- ACTION: Bento (gaps tile + clean) -->
             <div class="bento-only summary-bento">
                 <div class="well p-4 grid place-items-center text-center" style="color:var(--accent)">
@@ -524,7 +574,20 @@
         let currentResultSourceType = 'cleaned';
         let playheadRatio = 1; // 0..1 playback position within original (1 = full solid at rest)
 
+        // Optional advanced cutting settings (all persisted)
+        let speechBuffer = 0.15;   // trim tightness: Loose .20 / Natural .15 / Tight .08
+        let pauseMode = 'remove';  // 'remove' (cut fully) | 'cap' (shrink long pauses)
+        let pauseCapSec = 0.30;    // in 'cap' mode, keep at most this much silence per gap
+        let strengthMode = 'balanced'; // gentle | balanced | aggressive | max | custom
+
         const ENVELOPE_FPS = 100, SPEECH_BUFFER_SEC = 0.15, FADE_DURATION_SEC = 0.075;
+        const TIGHT_FLOOR = 0.08;  // hard safety floor so cuts never clip speech
+        const STRENGTH_PRESETS = {
+            gentle:     { q: -50, p: 1.5, tight: 0.20, mode: 'remove', cap: 0.30 },
+            balanced:   { q: -40, p: 1.0, tight: 0.15, mode: 'remove', cap: 0.30 },
+            aggressive: { q: -33, p: 0.6, tight: 0.08, mode: 'cap',    cap: 0.40 },
+            max:        { q: -28, p: 0.4, tight: 0.08, mode: 'cap',    cap: 0.25 }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             loadTheme();
@@ -560,13 +623,30 @@
                 const p = localStorage.getItem('quietcut_pause_length');
                 if (q !== null) { const v = parseInt(q, 10); if (!isNaN(v) && v >= -60 && v <= -20) document.getElementById('quietnessSlider').value = v; }
                 if (p !== null) { const v = parseFloat(p); if (!isNaN(v) && v >= 0.5 && v <= 3.0) document.getElementById('pauseLengthSlider').value = v; }
+
+                const tight = localStorage.getItem('quietcut_tightness');
+                const pm = localStorage.getItem('quietcut_pausemode');
+                const cap = localStorage.getItem('quietcut_pausecap');
+                const strength = localStorage.getItem('quietcut_strength');
+                if (tight !== null) { const v = parseFloat(tight); if (!isNaN(v) && v >= 0.05 && v <= 0.30) speechBuffer = v; }
+                if (pm === 'remove' || pm === 'cap') pauseMode = pm;
+                if (cap !== null) { const v = parseFloat(cap); if (!isNaN(v) && v >= 0.2 && v <= 1.0) pauseCapSec = v; }
+                if (strength) strengthMode = strength;
+
                 updateSliderLabels();
+                document.getElementById('pauseCapSlider').value = pauseCapSec;
+                syncCuttingUI();
+                setBitrate(mp3Bitrate);
             } catch (e) {}
         }
         function saveSettingsToStorage() {
             try {
                 localStorage.setItem('quietcut_quietness', document.getElementById('quietnessSlider').value);
                 localStorage.setItem('quietcut_pause_length', document.getElementById('pauseLengthSlider').value);
+                localStorage.setItem('quietcut_tightness', speechBuffer);
+                localStorage.setItem('quietcut_pausemode', pauseMode);
+                localStorage.setItem('quietcut_pausecap', pauseCapSec);
+                localStorage.setItem('quietcut_strength', strengthMode);
             } catch (e) {}
         }
 
@@ -574,8 +654,19 @@
         function setupEventListeners() {
             document.getElementById('fileInput').addEventListener('change', handleFileSelect);
             const qs = document.getElementById('quietnessSlider'), ps = document.getElementById('pauseLengthSlider');
-            qs.addEventListener('input', () => { updateSliderLabels(); recalculateSilenceAndRender(); saveSettingsToStorage(); });
-            ps.addEventListener('input', () => { updateSliderLabels(); recalculateSilenceAndRender(); saveSettingsToStorage(); });
+            qs.addEventListener('input', () => { strengthMode = 'custom'; syncCuttingUI(); updateSliderLabels(); recalculateSilenceAndRender(); saveSettingsToStorage(); });
+            ps.addEventListener('input', () => { strengthMode = 'custom'; syncCuttingUI(); updateSliderLabels(); recalculateSilenceAndRender(); saveSettingsToStorage(); });
+
+            const capSlider = document.getElementById('pauseCapSlider');
+            capSlider.addEventListener('input', () => {
+                pauseCapSec = parseFloat(capSlider.value);
+                strengthMode = 'custom';
+                document.getElementById('capLabel').textContent = `${pauseCapSec.toFixed(1)}s`;
+                paintRange(capSlider);
+                syncCuttingUI();
+                recalculateSilenceAndRender();
+                saveSettingsToStorage();
+            });
 
             document.getElementById('waveformCanvas').addEventListener('click', (e) => {
                 if (!originalBuffer) return;
@@ -613,6 +704,56 @@
 
         function setQuietnessPreset(val) { document.getElementById('quietnessSlider').value = val; updateSliderLabels(); recalculateSilenceAndRender(); saveSettingsToStorage(); }
         function setPauseLengthPreset(val) { document.getElementById('pauseLengthSlider').value = val; updateSliderLabels(); recalculateSilenceAndRender(); saveSettingsToStorage(); }
+
+        /* ---------------- Advanced cutting options ---------------- */
+        function setStrength(mode) {
+            const p = STRENGTH_PRESETS[mode];
+            if (!p) return;
+            strengthMode = mode;
+            document.getElementById('quietnessSlider').value = p.q;
+            document.getElementById('pauseLengthSlider').value = p.p;
+            speechBuffer = p.tight;
+            pauseMode = p.mode;
+            pauseCapSec = p.cap;
+            document.getElementById('pauseCapSlider').value = p.cap;
+            updateSliderLabels();
+            syncCuttingUI();
+            recalculateSilenceAndRender();
+            saveSettingsToStorage();
+        }
+
+        function setTightness(v) {
+            speechBuffer = v;
+            strengthMode = 'custom';
+            syncCuttingUI();
+            recalculateSilenceAndRender();
+            saveSettingsToStorage();
+        }
+
+        function setPauseMode(mode) {
+            pauseMode = mode;
+            strengthMode = 'custom';
+            syncCuttingUI();
+            recalculateSilenceAndRender();
+            saveSettingsToStorage();
+        }
+
+        function resetCuttingSettings() {
+            // Restore everything to Balanced defaults
+            setStrength('balanced');
+        }
+
+        // Highlight the active chips and show/hide the cap slider
+        function syncCuttingUI() {
+            document.querySelectorAll('.str-chip').forEach(el => el.classList.toggle('selected', el.dataset.mode === strengthMode));
+            document.querySelectorAll('.pm-chip').forEach(el => el.classList.toggle('selected', el.dataset.pm === pauseMode));
+            document.querySelectorAll('.tt-chip').forEach(el => el.classList.toggle('selected', Math.abs(parseFloat(el.dataset.tight) - speechBuffer) < 0.001));
+            document.getElementById('capSliderRow').style.display = (pauseMode === 'cap') ? 'block' : 'none';
+            document.getElementById('capLabel').textContent = `${pauseCapSec.toFixed(1)}s`;
+            const cap = document.getElementById('pauseCapSlider');
+            cap.value = pauseCapSec;
+            paintRange(cap);
+        }
 
         /* ---------------- File handling ---------------- */
         async function handleFileSelect(event) {
@@ -691,9 +832,15 @@
                 }
             }
 
+            // How much silence to keep on EACH side of a cut:
+            //  - 'cap' mode: keep half the cap amount (never below the safety floor)
+            //  - 'remove' mode: keep the trim-tightness buffer
+            const keepSide = (pauseMode === 'cap')
+                ? Math.max(TIGHT_FLOOR, pauseCapSec / 2)
+                : Math.max(TIGHT_FLOOR, speechBuffer);
             removedIntervals = [];
             for (const sil of rawSilences) {
-                const cutStart = sil.startSec + SPEECH_BUFFER_SEC, cutEnd = sil.endSec - SPEECH_BUFFER_SEC;
+                const cutStart = sil.startSec + keepSide, cutEnd = sil.endSec - keepSide;
                 if (cutEnd - cutStart > 0.05) removedIntervals.push({ start: cutStart, end: cutEnd });
             }
 
